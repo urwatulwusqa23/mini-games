@@ -1,0 +1,11 @@
+<div class="app-shell">
+  <header class="app-header">
+    <span class="brand">Connect 4</span>
+    <button type="button" class="theme-toggle" (click)="theme.toggle()">
+      {{ theme.theme() === 'dark' ? 'Light mode' : 'Dark mode' }}
+    </button>
+  </header>
+  <main class="app-main">
+    <router-outlet />
+  </main>
+</div>

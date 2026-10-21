@@ -1,0 +1,89 @@
+@if (needsName()) {
+  <div class="name-gate">
+    <div class="card">
+      <h2>Join game {{ code }}</h2>
+      <label class="field">
+        <span>Display name</span>
+        <input type="text" [(ngModel)]="nameInput" maxlength="20" (keyup.enter)="joinWithName()" />
+      </label>
+      @if (joinError()) {
+        <div class="error">{{ joinError() }}</div>
+      }
+      <button type="button" class="primary" [disabled]="joining()" (click)="joinWithName()">
+        Join
+      </button>
+    </div>
+  </div>
+} @else if (!state()) {
+  <div class="loading">Connecting...</div>
+} @else {
+  <div class="game-page">
+    <div class="top-bar">
+      <div class="room-info">
+        <span class="room-code">Room {{ code }}</span>
+        <button type="button" class="link-btn" (click)="copyInviteLink()">Copy invite link</button>
+      </div>
+      <button type="button" class="leave-btn" (click)="leave()">Leave</button>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score red">
+        <span class="dot red"></span>
+        {{ state()!.red?.name ?? 'Waiting...' }}
+        @if (state()!.red?.status === 'Reconnecting') {
+          <span class="status-pill">Reconnecting</span>
+        }
+        <strong>{{ state()!.score.redWins }}</strong>
+      </div>
+      <div class="score draws">Draws: {{ state()!.score.draws }}</div>
+      <div class="score yellow">
+        <strong>{{ state()!.score.yellowWins }}</strong>
+        {{ state()!.yellow?.name ?? 'Waiting for player 2...' }}
+        @if (state()!.yellow?.status === 'Reconnecting') {
+          <span class="status-pill">Reconnecting</span>
+        }
+        <span class="dot yellow"></span>
+      </div>
+    </div>
+
+    @if (!state()!.yellow && !state()!.isOver) {
+      <div class="waiting-banner">Waiting for a second player to join with room code {{ code }}...</div>
+    }
+
+    @if (canPlay() && !state()!.isOver) {
+      <div class="turn-indicator" [class.my-turn]="isMyTurn()">
+        {{ turnLabel() }}
+      </div>
+    }
+
+    @if (!canPlay()) {
+      <div class="spectator-banner">You're spectating this game.</div>
+    }
+
+    <app-board
+      [board]="state()!.board"
+      [winningCells]="state()!.winningCells"
+      [disabled]="!canPlay() || !isMyTurn() || state()!.isOver"
+      [myTurnColumn]="mySeatColor()"
+      (columnClicked)="drop($event)"
+    />
+
+    @if (state()!.isOver) {
+      <div class="result-banner">
+        <div class="result-text">{{ resultLabel() }}</div>
+        @if (canPlay()) {
+          <button type="button" class="primary" [disabled]="iRequestedRematch()" (click)="requestRematch()">
+            {{ iRequestedRematch() ? 'Waiting for opponent...' : 'Request rematch' }}
+          </button>
+          @if (opponentRequestedRematch()) {
+            <div class="rematch-hint">Your opponent wants a rematch.</div>
+          }
+        }
+      </div>
+    }
+
+    @if (state()!.spectatorCount > 0) {
+      <div class="spectator-count">{{ state()!.spectatorCount }} spectator(s) watching</div>
+    }
+  </div>
+}

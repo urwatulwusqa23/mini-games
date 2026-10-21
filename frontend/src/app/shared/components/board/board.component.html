@@ -1,0 +1,40 @@
+<div class="board-wrapper">
+  <div class="ghost-row">
+    @for (col of columns; track col) {
+      <div class="ghost-cell" (mouseenter)="onColumnEnter(col)" (mouseleave)="onColumnLeave()">
+        @if (hoveredColumn() === col && myTurnColumn && !isColumnFull(col)) {
+          <div class="piece ghost" [class.red]="myTurnColumn === 1" [class.yellow]="myTurnColumn === 2"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="board">
+    @for (col of columns; track col) {
+      <button
+        type="button"
+        class="column"
+        [class.disabled]="disabled || isColumnFull(col)"
+        (click)="onColumnClick(col)"
+        (mouseenter)="onColumnEnter(col)"
+        (mouseleave)="onColumnLeave()"
+        [attr.aria-label]="'Drop piece in column ' + (col + 1)"
+      >
+        @for (row of rows; track row) {
+          <div class="cell">
+            <div class="hole"></div>
+            @if (cellOwner(row, col) !== 0) {
+              <div
+                class="piece"
+                [class.red]="cellOwner(row, col) === 1"
+                [class.yellow]="cellOwner(row, col) === 2"
+                [class.winning]="isWinningCell(row, col)"
+                [style.--fall-distance.px]="-(row + 1) * 68"
+              ></div>
+            }
+          </div>
+        }
+      </button>
+    }
+  </div>
+</div>

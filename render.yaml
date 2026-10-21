@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: connect4-backend
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Connect4.Server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Set this in the Render dashboard to your deployed frontend's URL,
+      # e.g. https://connect4-frontend.vercel.app (no trailing slash).
+      - key: Cors__AllowedOrigins__0
+        value: https://REPLACE-WITH-YOUR-FRONTEND-URL
