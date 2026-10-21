@@ -33,6 +33,20 @@
       <button type="button" class="secondary" [disabled]="busy()" (click)="joinGame()">
         Join game
       </button>
+
+      <div class="divider">or</div>
+
+      <label class="field">
+        <span>Bot difficulty</span>
+        <select [(ngModel)]="botDifficulty">
+          <option value="Easy">Easy</option>
+          <option value="Medium">Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </label>
+      <button type="button" class="secondary" [disabled]="busy()" (click)="playVsBot()">
+        Play vs Bot
+      </button>
     </div>
   </div>
 </div>

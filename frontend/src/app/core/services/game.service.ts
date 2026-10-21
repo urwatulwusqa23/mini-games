@@ -92,6 +92,22 @@ export class GameService {
     });
   }
 
+  async createBotGame(name: string, difficulty: 'Easy' | 'Medium' | 'Hard'): Promise<string> {
+    const connection = await this.ensureConnected();
+    this.myName.set(name);
+
+    return new Promise<string>((resolve, reject) => {
+      const handler = (response: CreateGameResponse) => {
+        connection.off('GameCreated', handler);
+        this.mySeat.set('Red');
+        this.saveSeatToken({ code: response.code, token: response.token, seat: 'Red', name });
+        resolve(response.code);
+      };
+      connection.on('GameCreated', handler);
+      connection.invoke('CreateBotGame', name, difficulty).catch(reject);
+    });
+  }
+
   async joinGame(code: string, name: string): Promise<void> {
     const connection = await this.ensureConnected();
     this.myName.set(name);

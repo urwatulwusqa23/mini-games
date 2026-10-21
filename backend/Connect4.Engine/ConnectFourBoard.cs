@@ -143,4 +143,24 @@ public sealed class ConnectFourBoard
         Array.Copy(_cells, copy, _cells.Length);
         return copy;
     }
+
+    public int HeightOf(int column) => _columnHeights[column];
+
+    /// <summary>
+    /// Deep copy for speculative search (e.g. a bot exploring hypothetical moves) without
+    /// mutating this instance.
+    /// </summary>
+    public ConnectFourBoard Clone()
+    {
+        var clone = new ConnectFourBoard(CurrentTurn)
+        {
+            IsOver = IsOver,
+            Winner = Winner,
+            WinningCells = WinningCells,
+            MoveCount = MoveCount
+        };
+        Array.Copy(_cells, clone._cells, _cells.Length);
+        Array.Copy(_columnHeights, clone._columnHeights, _columnHeights.Length);
+        return clone;
+    }
 }

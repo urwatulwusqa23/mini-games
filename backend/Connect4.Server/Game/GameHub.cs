@@ -1,3 +1,4 @@
+using Connect4.Bot;
 using Connect4.Engine;
 using Connect4.Server.Models;
 using Microsoft.AspNetCore.SignalR;
@@ -11,6 +12,7 @@ namespace Connect4.Server.Game;
 public sealed class GameHub : Hub
 {
     private const int ReconnectWindowSeconds = 60;
+    private const string BotTokenMarker = "__BOT__";
     private readonly GameManager _manager;
     private readonly ILogger<GameHub> _logger;
 
@@ -31,6 +33,37 @@ public sealed class GameHub : Hub
             session.Red.Token = token;
             session.Red.ConnectionId = Context.ConnectionId;
             session.Red.Status = SeatStatus.Online;
+
+            _manager.TrackConnection(Context.ConnectionId, session.Code);
+            await Groups.AddToGroupAsync(Context.ConnectionId, session.Code);
+
+            await Clients.Caller.SendAsync("GameCreated", new CreateGameResponse(session.Code, token, "Red"));
+            await BroadcastState(session);
+        }
+        finally
+        {
+            session.Lock.Release();
+        }
+    }
+
+    public async Task CreateBotGame(string name, string difficulty)
+    {
+        var session = _manager.CreateGame();
+        await session.Lock.WaitAsync();
+        try
+        {
+            var token = Guid.NewGuid().ToString("N");
+            session.Red.Name = string.IsNullOrWhiteSpace(name) ? "Player 1" : name.Trim();
+            session.Red.Token = token;
+            session.Red.ConnectionId = Context.ConnectionId;
+            session.Red.Status = SeatStatus.Online;
+
+            session.IsBotGame = true;
+            session.BotSeat = Player.Yellow;
+            session.BotDifficulty = ParseDifficulty(difficulty);
+            session.Yellow.Name = $"Bot ({session.BotDifficulty})";
+            session.Yellow.Token = BotTokenMarker;
+            session.Yellow.Status = SeatStatus.Online;
 
             _manager.TrackConnection(Context.ConnectionId, session.Code);
             await Groups.AddToGroupAsync(Context.ConnectionId, session.Code);
@@ -125,6 +158,13 @@ public sealed class GameHub : Hub
                 return;
             }
 
+            if (session.IsBotGame && player.Value == session.BotSeat)
+            {
+                // The bot's seat has no real connection; a human can never legitimately hold it.
+                await Clients.Caller.SendAsync("Error", new ErrorDto("You are not a player in this game."));
+                return;
+            }
+
             var result = session.Board.DropPiece(player.Value, column);
             if (result.Status != MoveStatus.Ok)
             {
@@ -134,25 +174,52 @@ public sealed class GameHub : Hub
 
             session.LastActivityUtc = DateTime.UtcNow;
             await BroadcastState(session);
+            await HandleGameOverIfApplicable(session, result);
 
-            if (result.IsWin)
+            if (!result.IsWin && !result.IsDraw)
             {
-                session.Score.RecordWin(result.Winner);
-                session.LoserGoesFirst = result.Winner == Player.Red ? Player.Yellow : Player.Red;
-                await Clients.Group(session.Code).SendAsync(
-                    "GameOver",
-                    result.Winner.ToString(),
-                    result.WinningCells.Select(c => new CellDto(c.Row, c.Column)).ToArray());
-            }
-            else if (result.IsDraw)
-            {
-                session.Score.RecordDraw();
-                await Clients.Group(session.Code).SendAsync("GameOver", (string?)null, Array.Empty<CellDto>());
+                await TriggerBotMoveIfNeeded(session);
             }
         }
         finally
         {
             session.Lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// If this is a bot game and it's the bot's turn, computes and plays its move, then
+    /// broadcasts the result. No-op otherwise. Caller must already hold <see cref="GameSession.Lock"/>.
+    /// </summary>
+    private async Task TriggerBotMoveIfNeeded(GameSession session)
+    {
+        if (!session.IsBotGame || session.Board.IsOver || session.Board.CurrentTurn != session.BotSeat)
+        {
+            return;
+        }
+
+        await Task.Delay(400); // brief "thinking" pause so the bot's move doesn't feel instant
+        var botColumn = ConnectFourBot.ChooseColumn(session.Board, session.BotSeat, session.BotDifficulty);
+        var botResult = session.Board.DropPiece(session.BotSeat, botColumn);
+        await BroadcastState(session);
+        await HandleGameOverIfApplicable(session, botResult);
+    }
+
+    private async Task HandleGameOverIfApplicable(GameSession session, MoveResult result)
+    {
+        if (result.IsWin)
+        {
+            session.Score.RecordWin(result.Winner);
+            session.LoserGoesFirst = result.Winner == Player.Red ? Player.Yellow : Player.Red;
+            await Clients.Group(session.Code).SendAsync(
+                "GameOver",
+                result.Winner.ToString(),
+                result.WinningCells.Select(c => new CellDto(c.Row, c.Column)).ToArray());
+        }
+        else if (result.IsDraw)
+        {
+            session.Score.RecordDraw();
+            await Clients.Group(session.Code).SendAsync("GameOver", (string?)null, Array.Empty<CellDto>());
         }
     }
 
@@ -175,12 +242,20 @@ public sealed class GameHub : Hub
             if (player == Player.Red) session.Rematch.RedRequested = true;
             else session.Rematch.YellowRequested = true;
 
+            // The bot always agrees to a rematch immediately - there's no second human to ask.
+            if (session.IsBotGame)
+            {
+                if (session.BotSeat == Player.Red) session.Rematch.RedRequested = true;
+                else session.Rematch.YellowRequested = true;
+            }
+
             await Clients.Group(session.Code).SendAsync("RematchRequested", player.Value.ToString());
 
             if (session.Rematch.BothAgreed)
             {
                 session.ResetBoardForRematch();
                 await BroadcastState(session);
+                await TriggerBotMoveIfNeeded(session);
             }
         }
         finally
@@ -325,6 +400,9 @@ public sealed class GameHub : Hub
             Score: new ScoreDto(session.Score.RedWins, session.Score.YellowWins, session.Score.Draws),
             Rematch: new RematchStateDto(session.Rematch.RedRequested, session.Rematch.YellowRequested));
     }
+
+    private static BotDifficulty ParseDifficulty(string? difficulty) =>
+        Enum.TryParse<BotDifficulty>(difficulty, ignoreCase: true, out var parsed) ? parsed : BotDifficulty.Medium;
 
     private static string DescribeMoveStatus(MoveStatus status) => status switch
     {

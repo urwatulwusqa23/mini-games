@@ -9,7 +9,8 @@ the frontend.
 ```
 backend/
   Connect4.Engine/        Pure game logic (no SignalR dependency)
-  Connect4.Engine.Tests/  xUnit tests for the engine
+  Connect4.Bot/           Minimax + alpha-beta bot (depends only on Connect4.Engine)
+  Connect4.Engine.Tests/  xUnit tests for the engine and the bot
   Connect4.Server/        ASP.NET Core Web API + SignalR hub, game state manager
 frontend/
   src/app/core            Models, GameService (SignalR client), ThemeService
@@ -84,6 +85,24 @@ If you change the backend port, update `src/environments/environment.ts`
    highlights the winning cells; a full board with no winner is a draw.
 5. After the game ends, both players can request a rematch — once both agree,
    the board resets and the loser of the previous game goes first.
+
+Instead of **Create game**, you can click **Play vs Bot** (choosing Easy,
+Medium, or Hard) to play solo immediately, no second player needed.
+
+## The bot
+
+`Connect4.Bot` is a depth-limited minimax bot with alpha-beta pruning,
+scoring positions by counting 4-cell "windows" it could still win versus
+ones the opponent could still win, with a small bonus for center-column
+control. It's a separate project with no dependency on the hub or transport
+layer — it only reads `ConnectFourBoard`'s public state (via `Clone()` to
+simulate hypothetical moves) and returns a column index.
+
+Difficulty just changes search depth: Easy = 2 plies, Medium = 4, Hard = 7.
+When you play vs the bot, it occupies the Yellow seat server-side (with no
+real SignalR connection) and `GameHub` triggers its move automatically,
+after a short delay, whenever it becomes its turn — including on rematches,
+if it ends up going first.
 
 ## Reconnection
 

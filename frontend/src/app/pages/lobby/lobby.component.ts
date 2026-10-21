@@ -16,6 +16,7 @@ export class LobbyComponent {
 
   name = '';
   joinCode = '';
+  botDifficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium';
 
   readonly busy = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -33,6 +34,24 @@ export class LobbyComponent {
       await this.router.navigate(['/game', code]);
     } catch (err) {
       this.errorMessage.set('Could not create a game. Is the server running?');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async playVsBot(): Promise<void> {
+    if (!this.name.trim()) {
+      this.errorMessage.set('Enter a display name first.');
+      return;
+    }
+
+    this.busy.set(true);
+    this.errorMessage.set(null);
+    try {
+      const code = await this.game.createBotGame(this.name.trim(), this.botDifficulty);
+      await this.router.navigate(['/game', code]);
+    } catch (err) {
+      this.errorMessage.set('Could not start a game vs the bot. Is the server running?');
     } finally {
       this.busy.set(false);
     }

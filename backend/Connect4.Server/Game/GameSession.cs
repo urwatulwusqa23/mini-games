@@ -1,4 +1,5 @@
 using Connect4.Engine;
+using BotDifficulty = Connect4.Bot.BotDifficulty;
 
 namespace Connect4.Server.Game;
 
@@ -65,6 +66,10 @@ public sealed class GameSession
     public SemaphoreSlim Lock { get; } = new(1, 1);
     public DateTime LastActivityUtc { get; set; } = DateTime.UtcNow;
     public Player LoserGoesFirst { get; set; } = Player.Red;
+
+    public bool IsBotGame { get; set; }
+    public Player BotSeat { get; set; } = Player.None;
+    public BotDifficulty BotDifficulty { get; set; } = BotDifficulty.Medium;
 
     public SeatInfo? GetSeat(Player player) => player switch
     {

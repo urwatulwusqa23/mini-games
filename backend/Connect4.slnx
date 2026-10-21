@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Connect4.Bot/Connect4.Bot.csproj" />
   <Project Path="Connect4.Engine.Tests/Connect4.Engine.Tests.csproj" />
   <Project Path="Connect4.Engine/Connect4.Engine.csproj" />
   <Project Path="Connect4.Server/Connect4.Server.csproj" />

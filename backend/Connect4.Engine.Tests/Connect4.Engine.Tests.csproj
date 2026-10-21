@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Connect4.Engine\Connect4.Engine.csproj" />
+    <ProjectReference Include="..\Connect4.Bot\Connect4.Bot.csproj" />
   </ItemGroup>
 
 </Project>
