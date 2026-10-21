@@ -10,7 +10,11 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-      # Set this in the Render dashboard to your deployed frontend's URL,
-      # e.g. https://connect4-frontend.vercel.app (no trailing slash).
+      # sync: false means Render leaves this alone after the first deploy -
+      # set its real value in the dashboard (Environment tab) to your
+      # deployed frontend's URL, e.g. https://connect4-frontend.vercel.app
+      # (no trailing slash). Without sync: false, every git-triggered
+      # deploy re-syncs this from render.yaml and overwrites whatever
+      # you set manually in the dashboard.
       - key: Cors__AllowedOrigins__0
-        value: https://REPLACE-WITH-YOUR-FRONTEND-URL
+        sync: false
