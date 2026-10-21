@@ -2,10 +2,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY Connect4.Engine/Connect4.Engine.csproj Connect4.Engine/
+COPY Connect4.Bot/Connect4.Bot.csproj Connect4.Bot/
 COPY Connect4.Server/Connect4.Server.csproj Connect4.Server/
 RUN dotnet restore Connect4.Server/Connect4.Server.csproj
 
 COPY Connect4.Engine/ Connect4.Engine/
+COPY Connect4.Bot/ Connect4.Bot/
 COPY Connect4.Server/ Connect4.Server/
 RUN dotnet publish Connect4.Server/Connect4.Server.csproj -c Release -o /app --no-restore
 
