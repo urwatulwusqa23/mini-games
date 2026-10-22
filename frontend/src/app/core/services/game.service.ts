@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import {
+  ChatMessage,
   CreateGameResponse,
   ErrorPayload,
   GameState,
@@ -22,6 +23,7 @@ export class GameService {
   readonly connectionStatus = signal<'disconnected' | 'connecting' | 'connected'>('disconnected');
   readonly lastError = signal<string | null>(null);
   readonly lastEvent = signal<{ type: string; payload?: unknown } | null>(null);
+  readonly chatMessages = signal<ChatMessage[]>([]);
 
   private async ensureConnected(): Promise<signalR.HubConnection> {
     if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
@@ -71,6 +73,14 @@ export class GameService {
       this.lastError.set(error.message);
     });
 
+    connection.on('ChatHistory', (history: ChatMessage[]) => {
+      this.chatMessages.set(history ?? []);
+    });
+
+    connection.on('ChatMessageReceived', (message: ChatMessage) => {
+      this.chatMessages.update(messages => [...messages, message]);
+    });
+
     connection.onreconnecting(() => this.connectionStatus.set('connecting'));
     connection.onreconnected(() => this.connectionStatus.set('connected'));
     connection.onclose(() => this.connectionStatus.set('disconnected'));
@@ -79,6 +89,7 @@ export class GameService {
   async createGame(name: string): Promise<string> {
     const connection = await this.ensureConnected();
     this.myName.set(name);
+    this.chatMessages.set([]);
 
     return new Promise<string>((resolve, reject) => {
       const handler = (response: CreateGameResponse) => {
@@ -95,6 +106,7 @@ export class GameService {
   async createBotGame(name: string, difficulty: 'Easy' | 'Medium' | 'Hard'): Promise<string> {
     const connection = await this.ensureConnected();
     this.myName.set(name);
+    this.chatMessages.set([]);
 
     return new Promise<string>((resolve, reject) => {
       const handler = (response: CreateGameResponse) => {
@@ -139,6 +151,15 @@ export class GameService {
     await connection.invoke('RequestRematch', code);
   }
 
+  async sendChatMessage(code: string, text: string): Promise<void> {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+    const connection = await this.ensureConnected();
+    await connection.invoke('SendChatMessage', code, trimmed);
+  }
+
   async leaveGame(code: string): Promise<void> {
     if (!this.connection) {
       return;
@@ -147,6 +168,7 @@ export class GameService {
     this.clearSeatToken(code);
     this.gameState.set(null);
     this.mySeat.set(null);
+    this.chatMessages.set([]);
   }
 
   private saveSeatToken(seatToken: SeatToken): void {

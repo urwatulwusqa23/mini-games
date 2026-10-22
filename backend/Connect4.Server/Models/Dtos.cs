@@ -35,3 +35,5 @@ public sealed record CreateGameResponse(string Code, string Token, string Seat);
 public sealed record JoinGameResponse(string Code, string Token, string Seat);
 
 public sealed record ErrorDto(string Message);
+
+public sealed record ChatMessageDto(string Name, string Seat, string Text, DateTime SentAtUtc);

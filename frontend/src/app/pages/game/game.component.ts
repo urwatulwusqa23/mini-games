@@ -2,12 +2,13 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BoardComponent } from '../../shared/components/board/board.component';
+import { ChatBoxComponent } from '../../shared/components/chat-box/chat-box.component';
 import { GameService } from '../../core/services/game.service';
 
 @Component({
   selector: 'app-game',
   standalone: true,
-  imports: [BoardComponent, FormsModule],
+  imports: [BoardComponent, ChatBoxComponent, FormsModule],
   templateUrl: './game.component.html',
   styleUrl: './game.component.scss'
 })
@@ -25,6 +26,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   readonly state = this.game.gameState;
   readonly mySeat = this.game.mySeat;
+  readonly chatMessages = this.game.chatMessages;
 
   readonly mySeatColor = computed<1 | 2 | null>(() => {
     const seat = this.mySeat();
@@ -131,6 +133,10 @@ export class GameComponent implements OnInit, OnDestroy {
   async leave(): Promise<void> {
     await this.game.leaveGame(this.code);
     await this.router.navigate(['/']);
+  }
+
+  async sendChatMessage(text: string): Promise<void> {
+    await this.game.sendChatMessage(this.code, text);
   }
 
   copyInviteLink(): void {

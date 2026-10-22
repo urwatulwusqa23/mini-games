@@ -60,3 +60,10 @@ export interface SeatToken {
   seat: Seat;
   name: string;
 }
+
+export interface ChatMessage {
+  name: string;
+  seat: string;
+  text: string;
+  sentAtUtc: string;
+}

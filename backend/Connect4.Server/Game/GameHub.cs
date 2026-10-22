@@ -103,6 +103,7 @@ public sealed class GameHub : Hub
                 _manager.TrackConnection(Context.ConnectionId, session.Code);
                 await Groups.AddToGroupAsync(Context.ConnectionId, session.Code);
                 await Clients.Caller.SendAsync("JoinedGame", new JoinGameResponse(session.Code, seatInfo.Token, seatToRestore.ToString()));
+                await Clients.Caller.SendAsync("ChatHistory", session.ChatHistory);
                 await BroadcastState(session);
                 await Clients.Group(session.Code).SendAsync("PlayerJoined", seatInfo.Name, seatToRestore.ToString());
                 return;
@@ -122,6 +123,7 @@ public sealed class GameHub : Hub
                 _manager.TrackConnection(Context.ConnectionId, session.Code);
                 await Groups.AddToGroupAsync(Context.ConnectionId, session.Code);
                 await Clients.Caller.SendAsync("JoinedGame", new JoinGameResponse(session.Code, newToken, seatPlayer.ToString()));
+                await Clients.Caller.SendAsync("ChatHistory", session.ChatHistory);
                 await BroadcastState(session);
                 await Clients.Group(session.Code).SendAsync("PlayerJoined", normalizedName, seatPlayer.ToString());
                 return;
@@ -132,6 +134,7 @@ public sealed class GameHub : Hub
             _manager.TrackConnection(Context.ConnectionId, session.Code);
             await Groups.AddToGroupAsync(Context.ConnectionId, session.Code);
             await Clients.Caller.SendAsync("JoinedGame", new JoinGameResponse(session.Code, string.Empty, "Spectator"));
+            await Clients.Caller.SendAsync("ChatHistory", session.ChatHistory);
             await BroadcastState(session);
         }
         finally
@@ -262,6 +265,59 @@ public sealed class GameHub : Hub
         {
             session.Lock.Release();
         }
+    }
+
+    public async Task SendChatMessage(string code, string text)
+    {
+        if (!_manager.TryGetGame(code, out var session))
+        {
+            return;
+        }
+
+        var trimmed = (text ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+        {
+            return;
+        }
+        if (trimmed.Length > 500)
+        {
+            trimmed = trimmed[..500];
+        }
+
+        await session.Lock.WaitAsync();
+        try
+        {
+            var sender = ResolveSender(session, Context.ConnectionId);
+            if (sender is null)
+            {
+                return; // not a recognized participant (e.g. already disconnected)
+            }
+
+            var message = new ChatMessageDto(sender.Value.Name, sender.Value.Seat, trimmed, DateTime.UtcNow);
+            session.AddChatMessage(message);
+            await Clients.Group(session.Code).SendAsync("ChatMessageReceived", message);
+        }
+        finally
+        {
+            session.Lock.Release();
+        }
+    }
+
+    private (string Name, string Seat)? ResolveSender(GameSession session, string connectionId)
+    {
+        var player = session.GetPlayerByConnection(connectionId);
+        if (player is { } seat)
+        {
+            var seatInfo = session.GetSeat(seat)!;
+            return (seatInfo.Name, seat.ToString());
+        }
+
+        if (session.SpectatorConnectionIds.Contains(connectionId))
+        {
+            return ("Spectator", "Spectator");
+        }
+
+        return null;
     }
 
     public async Task LeaveGame(string code)

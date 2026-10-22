@@ -1,4 +1,5 @@
 using Connect4.Engine;
+using Connect4.Server.Models;
 using BotDifficulty = Connect4.Bot.BotDifficulty;
 
 namespace Connect4.Server.Game;
@@ -70,6 +71,19 @@ public sealed class GameSession
     public bool IsBotGame { get; set; }
     public Player BotSeat { get; set; } = Player.None;
     public BotDifficulty BotDifficulty { get; set; } = BotDifficulty.Medium;
+
+    private const int MaxChatHistory = 100;
+    private readonly List<ChatMessageDto> _chatHistory = new();
+    public IReadOnlyList<ChatMessageDto> ChatHistory => _chatHistory;
+
+    public void AddChatMessage(ChatMessageDto message)
+    {
+        _chatHistory.Add(message);
+        if (_chatHistory.Count > MaxChatHistory)
+        {
+            _chatHistory.RemoveAt(0);
+        }
+    }
 
     public SeatInfo? GetSeat(Player player) => player switch
     {

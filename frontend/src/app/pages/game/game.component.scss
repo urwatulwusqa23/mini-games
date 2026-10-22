@@ -63,6 +63,23 @@ button.primary {
   margin-bottom: 0.9rem;
 }
 
+.game-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
 .game-page {
   flex: 1;
   display: flex;
@@ -70,6 +87,7 @@ button.primary {
   align-items: center;
   gap: 1rem;
   padding-bottom: 2rem;
+  min-width: 0;
 }
 
 .top-bar {
@@ -204,4 +222,26 @@ button.primary {
 .rematch-hint {
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+.rematch-notice {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-success);
+  background: rgba(43, 138, 62, 0.12);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+}
+
+button.primary.pulse {
+  animation: pulse-rematch 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-rematch {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent);
+  }
 }
